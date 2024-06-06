@@ -8,12 +8,34 @@ import "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 contract BasicLpEthVsToken is ReentrancyGuard {
     IERC20 externalToken;
 
+    struct Position {
+        uint256 ethAmount;
+        uint256 externalTokenAmount;
+    }
+
+    mapping(address => Position) public detailedBalances;
+
     event OrderApplied(address indexed user, uint256 amount1, string token1, uint256 amount2, string token2);
 
     constructor(
         address _externalTokenContract
     ) {
         externalToken = IERC20(_externalTokenContract);
+    }
+
+    function addLiquidity(uint256 units) payable external nonReentrant() {
+        if (msg.value > 0) {
+            require(msg.sender.balance >= msg.value, "Not enough balance");
+
+            detailedBalances[msg.sender].ethAmount += msg.value;
+        }
+        else {
+            require(externalToken.balanceOf(msg.sender) >= units, "Not enough external token in user wallet");
+
+            require(externalToken.transferFrom(msg.sender, address(this), units), "Transfer failed");
+
+            detailedBalances[msg.sender].externalTokenAmount += units;
+        }
     }
 
     function exchangeWithEth() payable external nonReentrant {
@@ -35,7 +57,7 @@ contract BasicLpEthVsToken is ReentrancyGuard {
         require(externalToken.balanceOf(msg.sender) >= externalTokenAmount, "Not enough external token in user wallet");
 
         // Get Rate
-        uint256 ethAmountToSend = tryDiv(rateTokenVsEth(1, externalTokenAmount));
+        uint256 ethAmountToSend = Math.tryDiv(rateTokenVsEth(1, externalTokenAmount));
 
         require(address(this).balance >= ethAmountToSend, "Not enough ETH in contract");
 
