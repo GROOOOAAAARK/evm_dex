@@ -49,7 +49,7 @@ contract BasicLpEthVsToken is ReentrancyGuard {
         // Transfer external token to user
         require(externalToken.transferFrom(address(this), msg.sender, externalTokenAmountToSend), "Transfer failed");
 
-        emit OrderApplied(msg.sender, ethAmount, "ETH", externalTokenAmountToSend, externalToken.symbol());
+        emit OrderApplied(msg.sender, ethAmount, "ETH", externalTokenAmountToSend, externalToken._symbol);
     }
 
     function exchangeWithToken(uint256 externalTokenAmount) external nonReentrant {
