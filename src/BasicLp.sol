@@ -5,37 +5,45 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-contract BasicLpEthVsToken is ReentrancyGuard {
-    IERC20 externalToken;
+contract BasicLp is ReentrancyGuard {
+    IERC20 token0;
+    IERC20 token1;
 
-    struct Position {
-        uint256 ethAmount;
-        uint256 externalTokenAmount;
+    mapping(address => DepositSummary) public detailedBalances;
+
+    struct DepositSummary {
+        uint256 token0Amount;
+        uint256 token1Amount;
     }
 
-    mapping(address => Position) public detailedBalances;
-
-    event OrderApplied(address indexed user, uint256 amount1, string token1, uint256 amount2, string token2);
+    event OrderApplied(address indexed user, uint256 amount1, string token0, uint256 amount2, string token1);
 
     constructor(
-        address _externalTokenContract
+        address _token0Contract,
+        address _token1Contract
     ) {
-        externalToken = IERC20(_externalTokenContract);
+        token0 = IERC20(_token0Contract);
+        token1 = IERC20(_token1Contract);
     }
 
-    function addLiquidity(uint256 units) payable external nonReentrant() {
-        if (msg.value > 0) {
-            require(msg.sender.balance >= msg.value, "Not enough balance");
+    function mint(uint256 amount0, uint256 amount1) payable external nonReentrant() {
 
-            detailedBalances[msg.sender].ethAmount += msg.value;
-        }
-        else {
-            require(externalToken.balanceOf(msg.sender) >= units, "Not enough external token in user wallet");
+        require(amount0 > 0, "Token quantity of negative or null...");
 
-            require(externalToken.transferFrom(msg.sender, address(this), units), "Transfer failed");
+        require(amount1 > 0, "Token quantity negative or null...");
 
-            detailedBalances[msg.sender].externalTokenAmount += units;
-        }
+        require(token0.balanceOf(msg.sender) >= amount0, "Not enough external token in user wallet");
+
+        require(token0.transferFrom(msg.sender, address(this), amount0), "Transfer failed");
+
+        detailedBalances[msg.sender].token0Amount += amount0;
+
+        require(token1.balanceOf(msg.sender) >= amount1, "Not enough external token in user wallet");
+
+        require(token1.transferFrom(msg.sender, address(this), amount1), "Transfer failed");
+
+        detailedBalances[msg.sender].token1Amount += amount1;
+
     }
 
     function exchangeWithEth() payable external nonReentrant {
@@ -77,8 +85,13 @@ contract BasicLpEthVsToken is ReentrancyGuard {
         return address(this).balance;
     }
 
-    function totalExternalToken() external view returns (uint256) {
+    // Return total external token deposited
+    function totaltoken0() external view returns (uint256) {
+        return token0.balanceOf(address(this));
+    }
+
         // Return total external token deposited
-        return externalToken.balanceOf(address(this));
+    function totaltoken1() external view returns (uint256) {
+        return token1.balanceOf(address(this));
     }
 }
