@@ -23,6 +23,15 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
     @notice Stability Mechanism: Relative (pegged to the USD)
 */
 contract DecentralizedStableCoin is ERC20Burnable, Ownable{
+    error DecentralizedStableCoin__NotEnoughBalance();
+    error DecentralizedStableCoin__ZeroAmount();
+
     constructor() ERC20("DecentralizedStableCoin", "DSC") Ownable(msg.sender) {}
 
+    function burn(uint256 _amount) public override onlyOwner {
+        uint256 balance = balanceOf(msg.sender);
+        if(_amount == 0) revert DecentralizedStableCoin__ZeroAmount();
+        if(_amount > balance) revert DecentralizedStableCoin__NotEnoughBalance();
+        super.burn(_amount);
+    }
 }
